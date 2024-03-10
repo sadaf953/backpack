@@ -1,0 +1,82 @@
+.container {
+    display: flex;
+    margin-left: auto; /* Push the container to the right */
+    margin-right: auto; /* Push the container to the left */
+    flex-wrap: wrap; /* Ensure flex items wrap to the next line if necessary */
+  }
+  
+  .course-card {
+    position: relative;
+    display: flex;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 10px;
+    transition: border-color 0.3s ease;
+    margin: 5px; /* Adjust margin for spacing */
+    height: 332px;
+    width: 269px !important;
+  }
+  
+    .course-card:hover {
+      border-color: #007bff;
+    }
+   
+    .card-title{
+      padding-bottom:10px;
+      padding-left: 20px; 
+      padding-right: 20px; 
+      font-size:18px;
+      font-family: Inter,Helvetica Neue,Arial,sans-serif;
+    }
+    .card-text{
+      padding-top:0px;
+      padding-bottom:0px; 
+      padding-left: 20px; 
+      padding-right: 20px;
+      font-size:12px;
+      font-family: Inter,Helvetica Neue,Arial,sans-serif;
+    }
+    .course-btn{
+      background-color: #e1dddb;
+      color: #000;
+    }
+    div.image-wrapper{
+      height:75px;
+      width:250px;
+    }
+    
+    .star {
+    color: rgb(250, 167, 13);
+    font-size: 14px;
+    }
+    
+    div.card-body{
+      justify-content:center;
+      align-items: center;
+    }
+    
+    .rating{
+      font-size:12px;
+      font-family: 'Inter var experimental',sans-serif;
+      margin-top:-15px;
+      padding-left: 20px;
+    }
+    
+    .crs{
+      position: absolute;
+      bottom:30px;
+      left:10px;
+      margin-left:20px; 
+      background-color:#e1dddb;
+      border:none;
+      color: #000;
+      font-size:9px;
+      font-family: Inter,Helvetica Neue,Arial,sans-serif;
+    }
+    
+
+     /* .enroll{
+     margin-left:150px !important;
+    }
+    */ 
+  
