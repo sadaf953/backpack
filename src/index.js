@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import courses from './courses.js';
+import { useRouter } from 'next/navigation';
 
 const CourseCard = ({ course, courseId }) => {
-  const [showDetails, setShowDetails] = useState(false);
+  const router = useRouter();
 
-  const toggleDetails = () => {
-    setShowDetails(!showDetails);
-    if (!showDetails) {
-      window.open(`show.html?id=${courseId}`, '_blank'); // Open show.html with course ID
-    }
+  const showDetails = () => {
+    router.push(`/courses/${courseId}`);
   };
   
   return (
@@ -25,11 +23,13 @@ const CourseCard = ({ course, courseId }) => {
         <p className="rating">
           <span className="star">&#9733;</span> {course.rating} | {course.learners} learners
         </p>
-        {/* Button to toggle course details visibility */}
-        <button className="btn btn-sm crs" onClick={toggleDetails} style={{backgroundColor: "#0056b3", color: "white"}}>
-  Show Details
-</button>
-
+        <button 
+          className="btn btn-sm crs" 
+          onClick={showDetails} 
+          style={{backgroundColor: "#0056b3", color: "white"}}
+        >
+          Show Details
+        </button>
       </div>
     </div>
   );
