@@ -113,14 +113,8 @@ export default function SignupPage() {
                 Account created successfully!
               </h3>
               <p className="mt-2 text-green-700 dark:text-green-300">
-                Please check your email to verify your account before logging in.
+                Redirecting you to login...
               </p>
-              <Link
-                href="/auth/login"
-                className="mt-4 inline-block text-green-700 dark:text-green-300 hover:text-green-800 dark:hover:text-green-200"
-              >
-                Return to login
-              </Link>
             </motion.div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -209,15 +203,13 @@ export default function SignupPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className={`w-full px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 
-                         text-white rounded-xl font-medium shadow-lg shadow-blue-500/20
-                         hover:shadow-xl hover:shadow-blue-500/40 transform hover:-translate-y-0.5 
-                         transition-all duration-200 focus:outline-none focus:ring-2 
-                         focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 ${
-                  loading ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
+                className={`w-full py-3 px-4 rounded-xl text-white font-medium
+                  ${loading 
+                    ? 'bg-blue-400 dark:bg-blue-600 cursor-not-allowed'
+                    : 'bg-blue-500 dark:bg-blue-600 hover:bg-blue-600 dark:hover:bg-blue-700'
+                  } transition-colors duration-200`}
               >
-                {loading ? 'Creating account...' : 'Create account'}
+                {loading ? 'Creating Account...' : 'Create Account'}
               </button>
             </form>
           )}

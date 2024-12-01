@@ -52,7 +52,24 @@ export async function POST(request: NextRequest) {
         }
         users.push(newUser)
         console.log('Created new user:', { ...newUser, password: '[REDACTED]' })
-        console.log('Current users:', users.map(u => ({ ...u, password: '[REDACTED]' })))
+
+        // Create and sign JWT token for immediate login
+        const token = await new SignJWT({ 
+          userId: newUser.id,
+          email: newUser.email,
+          isAdmin: newUser.isAdmin 
+        })
+          .setProtectedHeader({ alg: 'HS256' })
+          .setExpirationTime('24h')
+          .sign(JWT_SECRET)
+
+        // Set the token in cookies
+        cookies().set('session', token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          maxAge: 60 * 60 * 24 // 24 hours
+        })
 
         return NextResponse.json({
           success: true,
