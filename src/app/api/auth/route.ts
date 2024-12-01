@@ -1,89 +1,58 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
-import { SignJWT, jwtVerify } from 'jose'
-import crypto from 'crypto'
-import { sendVerificationCode } from '@/lib/email'
+import { SignJWT } from 'jose'
 
 // In-memory storage (replace with database in production)
 let users: any[] = []
-let verificationCodes: Map<string, { code: string, email: string, userId: number }> = new Map()
-let verificationAttempts = new Map<string, { code: string; password: string; timestamp: number; attempts: number }>()
-
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'your-secret-key')
-
-// Maximum attempts allowed
-const MAX_VERIFICATION_ATTEMPTS = 5
-// Time window for attempts (in milliseconds) - 15 minutes
-const ATTEMPT_WINDOW = 15 * 60 * 1000
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { action, ...data } = body
-
-    console.log('Received auth request:', { action, ...data, password: '[REDACTED]' })
+    const { action, ...data } = await request.json()
 
     // Handle signup
     if (action === 'signup') {
-      try {
-        console.log('Processing signup request...')
-        const { email, password, name } = data
+      const { email, password, name } = data
 
-        if (!email || !password || !name) {
-          console.log('Missing required fields:', { email: !!email, password: !!password, name: !!name })
-          return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
-        }
-
-        // Check if user already exists
-        const existingUser = users.find(u => u.email === email)
-        if (existingUser) {
-          console.log('User already exists:', email)
-          return NextResponse.json({ error: 'Email already registered' }, { status: 400 })
-        }
-
-        // Create new user immediately
-        const newUser = {
-          id: users.length + 1,
-          email,
-          password,
-          name,
-          isEmailVerified: true,  // Set to true by default
-          isAdmin: false
-        }
-        users.push(newUser)
-        console.log('Created new user:', { ...newUser, password: '[REDACTED]' })
-
-        // Create and sign JWT token for immediate login
-        const token = await new SignJWT({ 
-          userId: newUser.id,
-          email: newUser.email,
-          isAdmin: newUser.isAdmin 
-        })
-          .setProtectedHeader({ alg: 'HS256' })
-          .setExpirationTime('24h')
-          .sign(JWT_SECRET)
-
-        // Set the token in cookies
-        cookies().set('session', token, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax',
-          maxAge: 60 * 60 * 24 // 24 hours
-        })
-
-        return NextResponse.json({
-          success: true,
-          user: {
-            email: newUser.email,
-            name: newUser.name,
-            isEmailVerified: newUser.isEmailVerified
-          }
-        })
-
-      } catch (error) {
-        console.error('Signup error:', error)
-        return NextResponse.json({ error: 'Failed to create account' }, { status: 500 })
+      if (!email || !password || !name) {
+        return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
       }
+
+      // Check if user already exists
+      if (users.find(u => u.email === email)) {
+        return NextResponse.json({ error: 'Email already registered' }, { status: 400 })
+      }
+
+      // Create new user
+      const newUser = {
+        id: users.length + 1,
+        email,
+        password,
+        name,
+        isEmailVerified: true,
+        isAdmin: false
+      }
+      users.push(newUser)
+
+      // Create and sign JWT token
+      const token = await new SignJWT({ 
+        userId: newUser.id,
+        email: newUser.email,
+        isAdmin: newUser.isAdmin 
+      })
+        .setProtectedHeader({ alg: 'HS256' })
+        .setExpirationTime('24h')
+        .sign(JWT_SECRET)
+
+      // Set the token in cookies
+      cookies().set('session', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 // 24 hours
+      })
+
+      return NextResponse.json({ success: true })
     }
 
     // Handle login
@@ -108,52 +77,30 @@ export async function POST(request: NextRequest) {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        maxAge: 86400 // 24 hours
+        maxAge: 60 * 60 * 24 // 24 hours
       })
 
-      return NextResponse.json({ 
-        message: 'Logged in successfully',
-        user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          isAdmin: user.isAdmin
-        }
-      })
+      return NextResponse.json({ success: true })
     }
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
   } catch (error) {
     console.error('Auth error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Something went wrong' }, { status: 500 })
   }
 }
 
 // Handle GET requests for session validation
 export async function GET(request: NextRequest) {
   try {
-    const token = cookies().get('session')?.value
-    if (!token) {
+    const session = cookies().get('session')
+    if (!session) {
       return NextResponse.json({ error: 'No session found' }, { status: 401 })
     }
 
-    const { payload } = await jwtVerify(token, JWT_SECRET)
-    const user = users.find(u => u.id === payload.userId)
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-
-    return NextResponse.json({
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        isAdmin: user.isAdmin
-      }
-    })
+    const { payload } = await jwtVerify(session.value, JWT_SECRET)
+    return NextResponse.json({ user: payload })
   } catch (error) {
-    console.error('Session validation error:', error)
     return NextResponse.json({ error: 'Invalid session' }, { status: 401 })
   }
 }

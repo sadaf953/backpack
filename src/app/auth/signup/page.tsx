@@ -22,13 +22,13 @@ export default function SignupPage() {
     setError('')
     setLoading(true)
 
-    try {
-      if (formData.password !== formData.confirmPassword) {
-        setError('Passwords do not match')
-        setLoading(false)
-        return
-      }
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match')
+      setLoading(false)
+      return
+    }
 
+    try {
       const response = await fetch('/api/auth', {
         method: 'POST',
         headers: {
@@ -48,9 +48,8 @@ export default function SignupPage() {
         throw new Error(data.error || 'Failed to create account')
       }
 
-      router.replace('/auth/login')
+      router.push('/auth/login')
     } catch (error: any) {
-      console.error('Signup error:', error)
       setError(error.message)
       setLoading(false)
     }
