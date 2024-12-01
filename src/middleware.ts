@@ -4,14 +4,13 @@ import { jwtVerify } from 'jose'
 
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'your-secret-key')
 
-// Add routes that don't require authentication
+// Public routes that don't require authentication
 const publicRoutes = [
   '/auth/login',
   '/auth/signup',
   '/auth/forgot-password',
   '/auth/reset-password',
-  '/auth/verify-email',
-  '/auth/resend-verification'
+  '/'
 ]
 
 // Add routes that require admin access

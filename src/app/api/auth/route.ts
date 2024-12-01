@@ -43,118 +43,29 @@ export async function POST(request: NextRequest) {
 
         // Create new user immediately
         const newUser = {
-          id: Date.now(),
+          id: users.length + 1,
           email,
           password,
           name,
-          isAdmin: email === 'admin@backpack.edu',
-          isEmailVerified: false,
+          isEmailVerified: true,  // Set to true by default
+          isAdmin: false
         }
         users.push(newUser)
         console.log('Created new user:', { ...newUser, password: '[REDACTED]' })
         console.log('Current users:', users.map(u => ({ ...u, password: '[REDACTED]' })))
 
-        // Create verification code (6 digits)
-        const verificationCode = Math.floor(100000 + Math.random() * 900000).toString()
-        const codeId = crypto.randomBytes(16).toString('hex')
-        
-        // Store verification data BEFORE sending email
-        verificationCodes.set(codeId, {
-          code: verificationCode,
-          email,
-          userId: newUser.id
-        })
-
-        // Debug log for verification storage
-        console.log('Stored verification data:', {
-          codeId,
-          storedData: verificationCodes.get(codeId),
-          allCodes: Array.from(verificationCodes.entries())
-        })
-
-        // Send verification email
-        await sendVerificationCode(email, verificationCode)
-        console.log('Sent verification code to:', email)
-
-        return NextResponse.json({ 
-          message: 'Verification code sent',
-          codeId,
+        return NextResponse.json({
+          success: true,
           user: {
             email: newUser.email,
             name: newUser.name,
             isEmailVerified: newUser.isEmailVerified
           }
         })
+
       } catch (error) {
         console.error('Signup error:', error)
         return NextResponse.json({ error: 'Failed to create account' }, { status: 500 })
-      }
-    }
-
-    // Handle verification
-    if (action === 'verify') {
-      try {
-        const { codeId, code, password } = data
-        
-        // Debug logs for verification attempt
-        console.log('Verifying code:', { 
-          codeId: codeId,
-          code: code,
-          hasPassword: !!password 
-        })
-
-        // Check if verification data exists
-        const verificationData = verificationAttempts.get(codeId)
-        if (!verificationData) {
-          console.log('No verification data found for codeId:', codeId)
-          return NextResponse.json({ 
-            error: 'Invalid or expired verification code',
-            debug: { codeId }
-          }, { status: 400 })
-        }
-
-        // Check if too many attempts
-        if (verificationData.attempts >= MAX_VERIFICATION_ATTEMPTS) {
-          return NextResponse.json({ 
-            error: 'Too many verification attempts. Please request a new code.',
-          }, { status: 429 })
-        }
-
-        // Check if code has expired
-        const now = Date.now()
-        if (now - verificationData.timestamp > ATTEMPT_WINDOW) {
-          verificationAttempts.delete(codeId)
-          return NextResponse.json({ 
-            error: 'Verification code has expired. Please request a new code.',
-          }, { status: 400 })
-        }
-
-        // Increment attempt counter
-        verificationData.attempts++
-        verificationAttempts.set(codeId, verificationData)
-
-        // Verify code and password
-        const isCodeValid = verificationData.code === code
-        const isPasswordValid = verificationData.password === password
-
-        if (!isCodeValid || !isPasswordValid) {
-          return NextResponse.json({ 
-            error: 'Invalid verification code or password',
-            attemptsRemaining: MAX_VERIFICATION_ATTEMPTS - verificationData.attempts
-          }, { status: 400 })
-        }
-
-        // Success! Remove the used code
-        verificationAttempts.delete(codeId)
-        
-        return NextResponse.json({
-          success: true,
-          message: 'Verification successful'
-        })
-
-      } catch (error) {
-        console.error('Verification error:', error)
-        return NextResponse.json({ error: 'Verification failed' }, { status: 500 })
       }
     }
 
@@ -165,10 +76,6 @@ export async function POST(request: NextRequest) {
       const user = users.find(u => u.email === email && u.password === password)
       if (!user) {
         return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
-      }
-
-      if (!user.isEmailVerified) {
-        return NextResponse.json({ error: 'Please verify your email first' }, { status: 403 })
       }
 
       const token = await new SignJWT({ 

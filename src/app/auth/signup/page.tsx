@@ -52,16 +52,11 @@ export default function SignupPage() {
         throw new Error(data.error || 'Failed to create account')
       }
 
-      if (!data.codeId) {
-        console.error('No codeId in response:', data)
-        throw new Error('No verification code ID received')
-      }
-
-      const verifyUrl = `/auth/verify-email?codeId=${data.codeId}`
-      console.log('Redirecting to:', verifyUrl)
-      
-      // Use replace instead of push to prevent back navigation
-      router.replace(verifyUrl)
+      setSuccess(true)
+      // Redirect to login page after successful signup
+      setTimeout(() => {
+        router.replace('/auth/login')
+      }, 2000)
     } catch (error: any) {
       console.error('Signup error:', error)
       setError(error.message)
