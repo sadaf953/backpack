@@ -7,8 +7,6 @@ export interface Course {
   level: 'Beginner' | 'Intermediate' | 'Advanced'
   topics: string[]
   image: string
-  rating: number
-  price: number
   createdAt: string
   status: 'pending' | 'approved' | 'rejected'
   createdBy: {

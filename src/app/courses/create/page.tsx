@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { useAuth } from '@/contexts/AuthContext'
 import { AlertCircle, Upload, Link, Lock } from 'lucide-react'
+import { addCourse, Course } from '@/lib/courses'
 
 // YouTube URL validation and thumbnail extraction
 const isYouTubeUrl = (url: string): boolean => {
@@ -39,8 +39,9 @@ const getYouTubeThumbnail = (url: string): string => {
 
 export default function CreateCoursePage() {
   const router = useRouter()
-  const { user, isAuthenticated } = useAuth()
   const [error, setError] = useState('')
+  const [youtubeLoading, setYoutubeLoading] = useState(false)
+  const [youtubeError, setYoutubeError] = useState('')
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -53,14 +54,60 @@ export default function CreateCoursePage() {
     imageUrl: '',
     imageFile: null as File | null,
     isLocal: false,
-    submitForReview: false
   })
   const [imagePreview, setImagePreview] = useState<string>('')
 
-  // Redirect if not authenticated
-  if (!isAuthenticated) {
-    router.push('/auth/login')
-    return null
+  
+
+  // Fetch YouTube video details
+  const fetchYouTubeDetails = async () => {
+    setYoutubeLoading(true)
+    setYoutubeError('')
+
+    try {
+      const response = await fetch('/api/youtube', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url: formData.url })
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        // Custom parsing for title and instructor
+        const rawTitle = result.data.title
+        const rawChannelTitle = result.data.channelTitle
+
+        // Try to extract instructor name from channel title
+        const parseInstructor = (channelTitle: string) => {
+          // Remove common words or suffixes
+          const cleanedTitle = channelTitle
+            .replace(/\s*(?:Official|Channel|Studio)\s*$/i, '')
+            .trim()
+          return cleanedTitle
+        }
+
+        setFormData(prev => ({
+          ...prev,
+          title: rawTitle,
+          instructor: parseInstructor(rawChannelTitle),
+          description: result.data.description.length > 200 
+            ? result.data.description.substring(0, 200) + '...' 
+            : result.data.description,
+          imageUrl: result.data.thumbnails.high.url
+        }))
+        setImagePreview(result.data.thumbnails.high.url)
+      } else {
+        setYoutubeError(result.message || 'Failed to fetch video details')
+      }
+    } catch (error) {
+      console.error('YouTube fetch error:', error)
+      setYoutubeError('Failed to fetch video details')
+    } finally {
+      setYoutubeLoading(false)
+    }
   }
 
   // Update image preview when URL changes
@@ -106,54 +153,70 @@ export default function CreateCoursePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError('')
     try {
       // Validate form data
-      if (!formData.title || !formData.description || !formData.instructor || !formData.duration || !formData.url) {
-        setError('Please fill in all required fields')
+      if (!formData.title.trim()) {
+        setError('Title is required')
+        return
+      }
+      if (!formData.description.trim()) {
+        setError('Description is required')
+        return
+      }
+      if (!formData.instructor.trim()) {
+        setError('Instructor name is required')
+        return
+      }
+      if (!formData.url.trim()) {
+        setError('URL is required')
+        return
+      }
+      if (!isYouTubeUrl(formData.url)) {
+        setError('Please enter a valid YouTube URL')
         return
       }
 
-      // Determine course image
-      let courseImage = '/placeholder-course.jpg'
-      if (isYouTubeUrl(formData.url)) {
-        courseImage = getYouTubeThumbnail(formData.url)
-      } else if (formData.imageUrl) {
-        courseImage = formData.imageUrl
-      } else if (formData.imageFile) {
-        courseImage = imagePreview
+      // Add course using the backend function
+      const result = await addCourse({
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        author: formData.instructor.trim(),
+        platform: 'YouTube',
+        link: formData.url.trim(),
+        image: formData.imageUrl || imagePreview || 'https://via.placeholder.com/300x200',
+        // Optional fields
+        duration: formData.duration?.trim(),
+        level: formData.level,
+        topics: formData.topics?.trim(),
+        price: formData.price?.trim()
+      })
+
+      if (!result.success) {
+        setError(result.error || 'Failed to create course')
+        return
       }
 
-      // Create new course
-      const newCourse = {
-        id: Date.now(),
-        ...formData,
-        topics: formData.topics ? formData.topics.split(',').map(topic => topic.trim()) : [],
-        price: formData.price === '' ? 0 : parseFloat(formData.price),
-        image: courseImage,
-        createdAt: new Date().toISOString(),
-        visibility: formData.isLocal ? 'private' : 'public',
-        status: formData.isLocal ? 'active' : (formData.submitForReview ? 'pending_review' : 'draft'),
-        createdBy: {
-          id: user!.id,
-          name: user!.name,
-          email: user!.email
-        }
-      }
-
-      // Save to appropriate storage based on visibility
-      if (formData.isLocal) {
-        // For local courses, save to savedCourses
-        const savedCourses = JSON.parse(localStorage.getItem('savedCourses') || '[]')
-        savedCourses.push(newCourse)
-        localStorage.setItem('savedCourses', JSON.stringify(savedCourses))
-        router.push('/dashboard')
-      } else {
-        // For public courses, save to courses
-        const courses = JSON.parse(localStorage.getItem('courses') || '[]')
-        courses.push(newCourse)
-        localStorage.setItem('courses', JSON.stringify(courses))
-        router.push('/courses')
-      }
+      // Reset form and show success
+      setFormData({
+        title: '',
+        description: '',
+        instructor: '',
+        url: '',
+        duration: '',
+        topics: '',
+        price: '',
+        level: 'Beginner',
+        imageUrl: '',
+        imageFile: null,
+        isLocal: false
+      })
+      setImagePreview('')
+      setYoutubeError('')
+      setError('Course added successfully!')
+      
+      // Redirect to courses page
+      router.push('/courses')
     } catch (err) {
       console.error('Error creating course:', err)
       setError('Failed to create course. Please try again.')
@@ -167,12 +230,8 @@ export default function CreateCoursePage() {
         animate={{ opacity: 1, y: 0 }}
         className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8"
       >
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Create a New Course</h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-300">
-            Share your knowledge with the world
-          </p>
-        </div>
+
+
 
         {error && (
           <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 rounded-xl flex items-center gap-3 text-red-600 dark:text-red-400">
@@ -236,14 +295,13 @@ export default function CreateCoursePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Duration
+                Duration (optional)
               </label>
               <input
                 type="text"
                 name="duration"
                 value={formData.duration}
                 onChange={handleChange}
-                required
                 className="w-full px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 
                          bg-white dark:bg-gray-700 text-gray-900 dark:text-white
                          focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
@@ -271,182 +329,137 @@ export default function CreateCoursePage() {
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Course URL
-            </label>
+          <div className="mb-6 flex items-center space-x-4">
             <input
-              type="url"
+              type="text"
               name="url"
               value={formData.url}
               onChange={handleChange}
               required
+              className="flex-grow px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 
+                       bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                       focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
+              placeholder="Course URL or YouTube Link"
+            />
+            <button
+              type="button"
+              onClick={fetchYouTubeDetails}
+              disabled={!formData.url || youtubeLoading}
+              className="px-4 py-2 bg-blue-600 text-white rounded-xl 
+                       hover:bg-blue-700 transition disabled:opacity-50"
+            >
+              {youtubeLoading ? 'Fetching...' : 'Fetch Details'}
+            </button>
+          </div>
+
+          {youtubeError && (
+            <div className="mb-4 text-red-600 dark:text-red-400">
+              {youtubeError}
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Course Image
+            </label>
+            
+            {/* Image Preview */}
+            {imagePreview && (
+              <div className="mb-4">
+                <img 
+                  src={imagePreview} 
+                  alt="Course preview" 
+                  className="w-full max-w-md h-48 object-cover rounded-xl"
+                />
+              </div>
+            )}
+
+            {/* Show image options only if not YouTube URL */}
+            {!isYouTubeUrl(formData.url) && (
+              <div className="space-y-4">
+                {/* Image URL input */}
+                <div>
+                  <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
+                    <Link className="w-4 h-4" />
+                    Image URL
+                  </label>
+                  <input
+                    type="url"
+                    value={formData.imageUrl}
+                    onChange={handleImageUrlChange}
+                    className="w-full px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 
+                             bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                             focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
+                    placeholder="Enter image URL"
+                  />
+                </div>
+
+                {/* File upload */}
+                <div>
+                  <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
+                    <Upload className="w-4 h-4" />
+                    Or upload an image
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileUpload}
+                    className="w-full px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 
+                             bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                             focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent
+                             file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0
+                             file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700
+                             hover:file:bg-blue-100 dark:file:bg-blue-900/30 dark:file:text-blue-400"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Topics (comma-separated)
+            </label>
+            <input
+              type="text"
+              name="topics"
+              value={formData.topics}
+              onChange={handleChange}
               className="w-full px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 
                        bg-white dark:bg-gray-700 text-gray-900 dark:text-white
                        focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
-              placeholder="e.g., https://www.coursera.org/learn/web-development"
+              placeholder="e.g., HTML, CSS, JavaScript (optional)"
             />
           </div>
 
-          {/* Local Course Toggle */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="isLocal"
-                  name="isLocal"
-                  checked={formData.isLocal}
-                  onChange={(e) => {
-                    const isLocal = e.target.checked;
-                    setFormData(prev => ({ 
-                      ...prev, 
-                      isLocal,
-                      submitForReview: isLocal ? false : prev.submitForReview 
-                    }))
-                  }}
-                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-400
-                           dark:border-gray-600 dark:bg-gray-700"
-                />
-                <label htmlFor="isLocal" className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                  <Lock className="w-4 h-4" />
-                  Add to My Dashboard Only
-                </label>
-              </div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                This course will only be visible in your personal dashboard
-              </p>
-            </div>
-
-            {/* Course Image Section */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Course Image
-              </label>
-              
-              {/* Image Preview */}
-              {imagePreview && (
-                <div className="mb-4">
-                  <img 
-                    src={imagePreview} 
-                    alt="Course preview" 
-                    className="w-full max-w-md h-48 object-cover rounded-xl"
-                  />
-                </div>
-              )}
-
-              {/* Show image options only if not YouTube URL */}
-              {!isYouTubeUrl(formData.url) && (
-                <div className="space-y-4">
-                  {/* Image URL input */}
-                  <div>
-                    <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
-                      <Link className="w-4 h-4" />
-                      Image URL
-                    </label>
-                    <input
-                      type="url"
-                      value={formData.imageUrl}
-                      onChange={handleImageUrlChange}
-                      className="w-full px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 
-                               bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                               focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
-                      placeholder="Enter image URL"
-                    />
-                  </div>
-
-                  {/* File upload */}
-                  <div>
-                    <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
-                      <Upload className="w-4 h-4" />
-                      Or upload an image
-                    </label>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFileUpload}
-                      className="w-full px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 
-                               bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                               focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent
-                               file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0
-                               file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700
-                               hover:file:bg-blue-100 dark:file:bg-blue-900/30 dark:file:text-blue-400"
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Topics (comma-separated)
-              </label>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Price ($)
+            </label>
+            <div className="flex items-center gap-4">
               <input
-                type="text"
-                name="topics"
-                value={formData.topics}
+                type="number"
+                name="price"
+                value={formData.price}
                 onChange={handleChange}
-                className="w-full px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 
+                min="0"
+                step="0.01"
+                className="flex-1 px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 
                          bg-white dark:bg-gray-700 text-gray-900 dark:text-white
                          focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
-                placeholder="e.g., HTML, CSS, JavaScript (optional)"
+                placeholder="450"
               />
+              <button
+                type="button"
+                onClick={() => setFormData(prev => ({ ...prev, price: '' }))}
+                className="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-xl
+                         hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500
+                         dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50"
+              >
+                Make Free
+              </button>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Price ($)
-              </label>
-              <div className="flex items-center gap-4">
-                <input
-                  type="number"
-                  name="price"
-                  value={formData.price}
-                  onChange={handleChange}
-                  min="0"
-                  step="0.01"
-                  className="flex-1 px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 
-                           bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                           focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
-                  placeholder="29.99"
-                />
-                <button
-                  type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, price: '' }))}
-                  className="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-xl
-                           hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500
-                           dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50"
-                >
-                  Make Free
-                </button>
-              </div>
-            </div>
-
-            {/* Submit for Review Option - Only show if not local */}
-            {!formData.isLocal && (
-              <div className="flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/30 rounded-xl">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="submitForReview"
-                    name="submitForReview"
-                    checked={formData.submitForReview}
-                    onChange={(e) => setFormData(prev => ({ 
-                      ...prev, 
-                      submitForReview: e.target.checked 
-                    }))}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-400
-                             dark:border-gray-600 dark:bg-gray-700"
-                  />
-                  <label htmlFor="submitForReview" className="flex items-center gap-2 text-sm font-medium text-blue-700 dark:text-blue-400">
-                    Submit for Review
-                  </label>
-                </div>
-                <p className="text-sm text-blue-600 dark:text-blue-300">
-                  Your course will be reviewed before being published to all users
-                </p>
-              </div>
-            )}
+          </div>
 
             {/* Submit Button */}
             <div className="flex flex-col gap-4">
@@ -457,10 +470,10 @@ export default function CreateCoursePage() {
                          dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus:ring-blue-400
                          transition-colors duration-200"
               >
-                {formData.isLocal ? "Publish Now" : (formData.submitForReview ? "Submit for Review" : "Save as Draft")}
+                {formData.isLocal ? "Publish Now" : "Add to Courses List"}
               </button>
             </div>
-          </div>
+         
         </form>
       </motion.div>
     </div>

@@ -12,18 +12,33 @@ export default function AddCoursePage() {
     description: '',
     author: '',
     platform: '',
-    rating: 5,
-    learners: 0,
     image: '',
     link: ''
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // TODO: Implement form submission
-    console.log('Form submitted:', formData)
-    // Redirect to dashboard after submission
-    router.push('/dashboard')
+    
+    try {
+      const response = await fetch('/api/courses/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        router.push('/dashboard')
+      } else {
+        // Handle error
+        console.error('Failed to create course:', data.error)
+      }
+    } catch (error) {
+      console.error('Error submitting form:', error)
+    }
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -44,11 +59,6 @@ export default function AddCoursePage() {
       <div className="max-w-3xl mx-auto">
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden">
           <div className="p-6 sm:p-8">
-            <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Add New Course</h1>
-              <p className="mt-2 text-gray-600 dark:text-gray-300">Share an educational resource with the community</p>
-            </div>
-
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Title */}
               <div>
@@ -132,47 +142,7 @@ export default function AddCoursePage() {
                 </div>
               </div>
 
-              {/* Rating & Learners */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    <div className="flex items-center gap-2">
-                      <Star className="w-4 h-4" />
-                      <span>Rating</span>
-                    </div>
-                  </label>
-                  <input
-                    type="number"
-                    name="rating"
-                    value={formData.rating}
-                    onChange={handleChange}
-                    min="0"
-                    max="5"
-                    step="0.1"
-                    required
-                    className="w-full px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 
-                             bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                             focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Number of Learners
-                  </label>
-                  <input
-                    type="number"
-                    name="learners"
-                    value={formData.learners}
-                    onChange={handleChange}
-                    min="0"
-                    required
-                    className="w-full px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 
-                             bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                             focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
-                  />
-                </div>
-              </div>
+  
 
               {/* Image URL & Course Link */}
               <div className="space-y-6">

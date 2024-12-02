@@ -3,7 +3,7 @@
 import { courses } from '@/lib/courses'
 import { notFound, useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Users, Star, ExternalLink, Plus, CheckCircle } from 'lucide-react'
+import { ExternalLink, Plus, CheckCircle } from 'lucide-react'
 import { useState, useEffect } from 'react'
 
 export default function CoursePage({ params }: { params: { id: string } }) {
@@ -65,16 +65,7 @@ export default function CoursePage({ params }: { params: { id: string } }) {
                 <h1 className="text-3xl sm:text-4xl font-bold mb-6 text-gray-900 dark:text-white">
                   {course.title}
                 </h1>
-                <div className="flex items-center space-x-6 mb-8">
-                  <div className="flex items-center">
-                    <Star className="w-5 h-5 text-yellow-400 mr-2" />
-                    <span className="font-medium text-gray-900 dark:text-white">{course.rating}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <Users className="w-5 h-5 text-gray-400 mr-2" />
-                    <span className="text-gray-600 dark:text-gray-300">{course.learners.toLocaleString()} learners</span>
-                  </div>
-                </div>
+                
 
                 {/* Instructor & Platform */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">

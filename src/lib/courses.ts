@@ -1,13 +1,17 @@
+import { prisma } from './prisma'
+
 export interface Course {
-  id: number
+  id?: number
   title: string
   author: string
   platform: string
   description?: string
   image: string
   link: string
-  rating: number
-  learners: number
+  duration?: string
+  level?: string
+  topics?: string
+  price?: string
 }
 
 export const courses: Course[] = [
@@ -19,8 +23,7 @@ export const courses: Course[] = [
     description: "Memory Mastery, Memory Retention, Enhancing Self-Esteem & Confidence",
     image: "https://img-b.udemycdn.com/course/240x135/3695326_2d39_3.jpg",
     link: "https://www.udemy.com/course/accelerated-student-memory-mastery/learn/lecture/23763580?start=0#overview",
-    rating: 4.5,
-    learners: 1000
+  
   },
   {
     id: 2,
@@ -30,8 +33,7 @@ export const courses: Course[] = [
     description: "Learn Python - Full Course for Beginners [Tutorial]",
     image: "https://i.ytimg.com/vi/zJ-LqeX_fLU/hqdefault.jpg",
     link: "https://www.youtube.com/embed/rfscVS0vtbw",
-    rating: 3.5,
-    learners: 1654
+    
   },
   {
     id: 3,
@@ -41,9 +43,8 @@ export const courses: Course[] = [
     description: "TensorFlow framework is used to build several neural networks and explore more advanced techniques like natural language processing and reinforcement learning.",
     image: "https://i.ytimg.com/vi/tPYj3fFJGjk/hqdefault.jpg",
     link: "https://www.freecodecamp.org/learn/machine-learning-with-python/",
-    rating: 3.5,
-    learners: 1654
   },
+  
   {
     id: 4,
     title: "Introduction to Large Language Models",
@@ -52,8 +53,6 @@ export const courses: Course[] = [
     description: "Learn Python - Full Course for Beginners [Tutorial]",
     image: "https://cdn.qwiklabs.com/xObBJc2NLmPNIX735GDMYOeZvwM5Qps3cy%2F3%2Fr8no%2Bk%3D",
     link: "https://www.cloudskillsboost.google/paths/118/course_templates/539",
-    rating: 2.5,
-    learners: 1654
   },
   {
     id: 5,
@@ -62,8 +61,7 @@ export const courses: Course[] = [
     platform: "YouTube",
     image: "https://i.ytimg.com/vi/rmVRLeJRkl4/hqdefault.jpg",
     link: "https://www.youtube.com/embed/rmVRLeJRkl4",
-    rating: 2.5,
-    learners: 1654
+    
   },
   {
     id: 6,
@@ -72,8 +70,7 @@ export const courses: Course[] = [
     platform: "Youtube",
     image: "https://i.ytimg.com/vi/rfscVS0vtbw/hqdefault.jpg",
     link: "https://www.youtube.com/embed/rfscVS0vtbw",
-    rating: 5.0,
-    learners: 200
+    
   },
   {
     id: 7,
@@ -82,8 +79,7 @@ export const courses: Course[] = [
     platform: "Youtube",
     image: "https://i.ytimg.com/vi/zJ-LqeX_fLU/hqdefault.jpg",
     link: "https://www.youtube.com/embed/zJ-LqeX_fLU",
-    rating: 3.8,
-    learners: 4567
+    
   },
   {
     id: 8,
@@ -92,8 +88,7 @@ export const courses: Course[] = [
     platform: "Youtube",
     image: "https://img.youtube.com/vi/R6RX2Zx96fE/hqdefault.jpg",
     link: "https://www.youtube.com/embed/R6RX2Zx96fE",
-    rating: 3.5,
-    learners: 236
+    
   },
   {
     id: 9,
@@ -102,8 +97,7 @@ export const courses: Course[] = [
     platform: "Youtube",
     image: "https://img.youtube.com/vi/XmckF29tqGs/hqdefault.jpg",
     link: "https://www.youtube.com/embed/XmckF29tqGs",
-    rating: 1.2,
-    learners: 24
+    
   },
   {
     id: 10,
@@ -112,8 +106,7 @@ export const courses: Course[] = [
     platform: "Youtube",
     image: "https://img.youtube.com/vi/jGwO_UgTS7I/hqdefault.jpg",
     link: "https://www.youtube.com/embed/jGwO_UgTS7I",
-    rating: 4.5,
-    learners: 4
+    
   },
   {
     id: 11,
@@ -122,8 +115,65 @@ export const courses: Course[] = [
     platform: "Youtube",
     image: "https://img.youtube.com/vi/JMUxmLyrhSk/hqdefault.jpg",
     link: "https://www.youtube.com/embed/JMUxmLyrhSk",
-    rating: 3.2,
-    learners: 45
+    
   },
   // Add more course objects here
 ];
+
+// Add this function to export addCourse
+export async function addCourse(courseData: Course) {
+  try {
+    // Validate required fields
+    if (!courseData.title || !courseData.author || !courseData.link) {
+      throw new Error('Missing required course information')
+    }
+
+    // Prepare course data for database
+    const newCourseData = {
+      title: courseData.title,
+      author: courseData.author,
+      platform: courseData.platform || 'YouTube',
+      description: courseData.description || '',
+      image: courseData.image || 'https://via.placeholder.com/300x200',
+      link: courseData.link,
+      duration: courseData.duration || '',
+      level: courseData.level || 'Beginner',
+      topics: courseData.topics || '',
+      price: courseData.price || ''
+    }
+
+    // Save to database
+    const savedCourse = await prisma.course.create({
+      data: newCourseData
+    })
+
+    // Add to static courses array
+    const newCourse: Course = {
+      ...newCourseData,
+      id: savedCourse.id
+    }
+    courses.push(newCourse)
+
+    return { 
+      success: true, 
+      course: newCourse 
+    }
+  } catch (error) {
+    console.error('Error creating course:', error)
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to create course' 
+    }
+  }
+}
+
+// Export function to get all courses
+export async function getAllCourses() {
+  try {
+    const dbCourses = await prisma.course.findMany()
+    return [...courses, ...dbCourses]
+  } catch (error) {
+    console.error('Error fetching courses:', error)
+    return courses
+  }
+}

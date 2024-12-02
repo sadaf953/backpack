@@ -1,4 +1,4 @@
-'use client'
+ 'use client'
 
 import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
@@ -11,8 +11,6 @@ interface CourseCardProps {
     author: string
     platform: string
     image: string
-    rating: number
-    learners: number
   }
   index: number
 }
@@ -58,14 +56,9 @@ export function CourseCard({ course, index }: CourseCardProps) {
           <p className="text-gray-600 dark:text-gray-300 text-sm mb-2">{course.author}</p>
           
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-1">
-              <span className="text-yellow-400">★</span>
-              <span className="text-gray-700 dark:text-gray-300 font-medium">{course.rating}</span>
-            </div>
+           
             
-            <span className="text-gray-500 dark:text-gray-400 text-sm">
-              {(course.learners || 0).toLocaleString()} learners
-            </span>
+            
           </div>
         </div>
 
