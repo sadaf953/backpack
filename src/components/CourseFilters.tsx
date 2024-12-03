@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion'
 import { useState } from 'react'
+import { Search, Filter, ChevronDown } from 'lucide-react'
 
 type SortType = 'popular' | 'rating' | 'newest'
 
@@ -15,16 +16,14 @@ interface Filters {
 interface CourseFiltersProps {
   platforms: string[]
   onFilterChange: (filters: Filters) => void
+  filters: Filters
 }
 
-export function CourseFilters({ platforms, onFilterChange }: CourseFiltersProps) {
-  const [filters, setFilters] = useState<Filters>({
-    search: '',
-    platform: '',
-    rating: null,
-    sort: 'popular'
-  })
-
+export function CourseFilters({ 
+  platforms, 
+  onFilterChange, 
+  filters 
+}: CourseFiltersProps) {
   const handleChange = (
     key: keyof Filters,
     value: string | number | null
@@ -33,7 +32,6 @@ export function CourseFilters({ platforms, onFilterChange }: CourseFiltersProps)
       ...filters,
       [key]: value
     }
-    setFilters(newFilters)
     onFilterChange(newFilters)
   }
 
@@ -41,29 +39,33 @@ export function CourseFilters({ platforms, onFilterChange }: CourseFiltersProps)
     <motion.div
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
-      className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4"
+      className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-6"
     >
-      <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          Filters
+        </h3>
+
         {/* Search Input */}
-        <div>
+        <div className="mb-4">
           <label htmlFor="search" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Search Courses
           </label>
-          <input
-            type="text"
-            id="search"
-            value={filters.search}
-            onChange={(e) => handleChange('search', e.target.value)}
-            placeholder="Search by title or author..."
-            className="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 
-                     bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                     focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                     placeholder-gray-400 dark:placeholder-gray-500"
-          />
+          <div className="relative">
+            <input
+              type="text"
+              id="search"
+              placeholder="Title or author..."
+              value={filters.search}
+              onChange={(e) => handleChange('search', e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+            />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+          </div>
         </div>
 
         {/* Platform Filter */}
-        <div>
+        <div className="mb-4">
           <label htmlFor="platform" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Platform
           </label>
@@ -71,9 +73,7 @@ export function CourseFilters({ platforms, onFilterChange }: CourseFiltersProps)
             id="platform"
             value={filters.platform}
             onChange={(e) => handleChange('platform', e.target.value)}
-            className="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 
-                     bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                     focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
           >
             <option value="">All Platforms</option>
             {platforms.map((platform) => (
@@ -84,29 +84,9 @@ export function CourseFilters({ platforms, onFilterChange }: CourseFiltersProps)
           </select>
         </div>
 
-        {/* Rating Filter */}
-        <div>
-          <label htmlFor="rating" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Minimum Rating
-          </label>
-          <select
-            id="rating"
-            value={filters.rating || ''}
-            onChange={(e) => handleChange('rating', e.target.value ? Number(e.target.value) : null)}
-            className="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 
-                     bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                     focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="">Any Rating</option>
-            {[4.5, 4, 3.5, 3].map((rating) => (
-              <option key={rating} value={rating}>
-                {rating}+ Stars
-              </option>
-            ))}
-          </select>
-        </div>
+        
 
-        {/* Sort Filter */}
+        {/* Sort By */}
         <div>
           <label htmlFor="sort" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Sort By
@@ -115,9 +95,7 @@ export function CourseFilters({ platforms, onFilterChange }: CourseFiltersProps)
             id="sort"
             value={filters.sort}
             onChange={(e) => handleChange('sort', e.target.value as SortType)}
-            className="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 
-                     bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                     focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
           >
             <option value="popular">Most Popular</option>
             <option value="rating">Highest Rated</option>

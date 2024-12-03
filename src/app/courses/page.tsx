@@ -6,21 +6,28 @@ import { Search, Filter } from 'lucide-react'
 import { CourseCard } from '@/components/CourseCard'
 import type { Course } from '@/lib/types'
 
+
+
 export default function CoursesPage() {
   const [courses, setCourses] = useState<Course[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedLevel, setSelectedLevel] = useState('all')
   const [priceFilter, setPriceFilter] = useState('all')
+  
 
   useEffect(() => {
-    // Load public courses from localStorage
-    const storedCourses = JSON.parse(localStorage.getItem('courses') || '[]')
-    // Only show approved public courses
-    const publicCourses = storedCourses.filter((course: Course) => 
-      course.visibility === 'public' && course.status === 'approved'
-    )
-    setCourses(publicCourses)
-  }, [])
+    const storedCourses = JSON.parse(localStorage.getItem('courses') || '[]') as Course[];
+    const publicCourses = storedCourses.filter((course: any, index: number) => {
+      if (!course.id) {
+        course.id = index + 1;  // Assign sequential ID starting from 1
+      }
+      console.log(`Course ID: ${course.id}`);  // Log the ID for verification
+      return course.visibility === 'public' && course.status === 'approved';
+    }) as Course[];
+    setCourses(publicCourses);
+  }, []);
+
+   
 
   const filteredCourses = courses.filter(course => {
     const matchesSearch = course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -101,8 +108,16 @@ export default function CoursesPage() {
           {filteredCourses.length > 0 ? (
             filteredCourses.map((course, index) => (
               <CourseCard
-                key={course.id}
-                course={course}
+                key={course.id!}  // Use non-null assertion
+                course={{
+                  id: course.id!,
+                  title: course.title,
+                  author: course.author,  // Use author instead of instructor
+                  platform: course.platform,
+                  image: course.image,
+                  description: course.description,
+                  price: course.price
+                }}
                 index={index}
               />
             ))
@@ -123,4 +138,6 @@ export default function CoursesPage() {
       </div>
     </div>
   )
+
+  
 }

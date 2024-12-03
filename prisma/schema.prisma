@@ -11,11 +11,30 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
+  id        String    @id @default(cuid())
+  email     String    @unique
   password  String
   name      String?
-  isAdmin   Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  isAdmin   Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  courses   Course[]  @relation("CreatedBy")
+}
+
+model Course {
+  id          String    @id @default(cuid())
+  title       String
+  description String
+  instructor  String
+  duration    String
+  level       String
+  topics      String    // You'll need to handle array conversion in your code
+  image       String
+  createdAt   DateTime  @default(now())
+  status      String    @default("pending")
+  visibility  String    @default("public")
+  feedback    String?
+  price       Float?
+  createdBy   User      @relation("CreatedBy", fields: [userId], references: [id])
+  userId      String
 }

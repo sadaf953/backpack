@@ -29,7 +29,19 @@ export function Navbar() {
               </Link>
             </div>
           </div>
-          <div className="flex items-center">
+          <div className="flex items-center space-x-4">
+            <Link
+              href="/auth/login"
+              className="text-sm font-medium text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200"
+            >
+              Login
+            </Link>
+            <Link
+              href="/auth/register"
+              className="text-sm font-medium text-blue-600 hover:text-blue-500"
+            >
+              Sign Up
+            </Link>
             <ThemeToggle />
           </div>
         </div>

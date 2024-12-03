@@ -9,15 +9,18 @@ export interface Course {
   image: string
   createdAt: string
   status: 'pending' | 'approved' | 'rejected'
+  visibility: 'public' | 'private'
   createdBy: {
     id: number
     name: string
     email: string
   }
   feedback?: string
+  price?: number
 }
 
 export type CourseStatus = 'pending' | 'approved' | 'rejected'
+export type CourseVisibility = 'public' | 'private'
 
 export interface User {
   id: number

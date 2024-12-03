@@ -1,1 +1,1 @@
-self.__NEXT_FONT_MANIFEST="{\"pages\":{},\"app\":{},\"appUsingSizeAdjust\":false,\"pagesUsingSizeAdjust\":false}"
+self.__NEXT_FONT_MANIFEST="{\"pages\":{},\"app\":{\"/Users/mahvishsadaf/CascadeProjects/backpack/src/app/layout\":[\"static/media/c95a3d7e5d1d39ce-s.p.woff2\",\"static/media/a34f9d1faa5f3315-s.p.woff2\"]},\"appUsingSizeAdjust\":true,\"pagesUsingSizeAdjust\":false}"

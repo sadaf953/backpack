@@ -11,9 +11,16 @@ interface CourseCardProps {
     author: string
     platform: string
     image: string
+    description: string
+    price?: number
+    createdBy?: {
+      name: string
+    }
   }
   index: number
+
 }
+
 
 export function CourseCard({ course, index }: CourseCardProps) {
   const router = useRouter()
@@ -47,18 +54,27 @@ export function CourseCard({ course, index }: CourseCardProps) {
           </div>
         </div>
 
-        <div className="p-4 dark:text-white">
-          <h3 className="text-lg font-semibold mb-2 line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 
-                       transition-colors duration-300">
-            {course.title}
-          </h3>
-          
-          <p className="text-gray-600 dark:text-gray-300 text-sm mb-2">{course.author}</p>
-          
+        <div className="p-6 flex flex-col justify-between">
+          <div>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold mb-2 line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 
+                       transition-colors duration-300 text-ellipsis overflow-hidden">
+                {course.title}
+              </h3>
+              {/* Shared by badge */}
+              {course.createdBy && (
+                <span className="text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full">
+                  Shared by {course.createdBy.name}
+                </span>
+              )}
+            </div>
+            <p className="text-gray-600 dark:text-gray-300 text-sm mb-2">{course.author}</p>
+            <p className="text-gray-600 dark:text-gray-300 text-sm mb-2 line-clamp-3">{course.description}</p>
+            <p className="text-gray-600 dark:text-gray-300 text-sm mb-2">
+              {course.price ? `$${course.price.toLocaleString()}` : 'Free'}
+            </p>
+          </div>
           <div className="flex items-center justify-between">
-           
-            
-            
           </div>
         </div>
 

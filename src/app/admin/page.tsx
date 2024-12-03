@@ -129,9 +129,7 @@ export default function AdminPage() {
                           <span className="text-sm text-gray-500 dark:text-gray-400">
                             Submitted by: {course.createdBy?.name || 'Unknown'}
                           </span>
-                          <span className="text-sm text-gray-500 dark:text-gray-400">
-                            Price: {course.price === 0 ? 'Free' : `$${course.price}`}
-                          </span>
+                          
                         </div>
                       </div>
                     </div>
