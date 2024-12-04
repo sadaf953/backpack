@@ -1,5 +1,3 @@
 {
-  "/api/youtube/route": "app/api/youtube/route.js",
-  "/api/courses/route": "app/api/courses/route.js",
-  "/courses/create/page": "app/courses/create/page.js"
+  "/profile/page": "app/profile/page.js"
 }

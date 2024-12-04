@@ -189,6 +189,13 @@ export default function CreateCoursePage() {
       })
 
       if (!result.success) {
+        // Check for specific authentication error
+        if (result.error?.includes('Unauthorized')) {
+          setError('Please log in to create a course')
+          router.push('/auth/login')
+          return
+        }
+        
         setError(result.error || 'Failed to create course')
         return
       }

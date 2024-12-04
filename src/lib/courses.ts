@@ -73,6 +73,7 @@ export async function addCourse(courseData: Omit<Course, 'id' | 'createdBy'>): P
   try {
     const response = await fetch('/api/courses', {
       method: 'POST',
+      credentials: 'include', // This is crucial for sending cookies
       headers: {
         'Content-Type': 'application/json',
       },
