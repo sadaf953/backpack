@@ -5,29 +5,75 @@ import { motion } from 'framer-motion'
 import { Search, Filter } from 'lucide-react'
 import { CourseCard } from '@/components/CourseCard'
 import type { Course } from '@/lib/types'
-
-
+import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 
 export default function CoursesPage() {
   const [courses, setCourses] = useState<Course[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedLevel, setSelectedLevel] = useState('all')
   const [priceFilter, setPriceFilter] = useState('all')
-  
+  const { data: session } = useSession()
+  const router = useRouter()
 
   useEffect(() => {
-    const storedCourses = JSON.parse(localStorage.getItem('courses') || '[]') as Course[];
-    const publicCourses = storedCourses.filter((course: any, index: number) => {
-      if (!course.id) {
-        course.id = index + 1;  // Assign sequential ID starting from 1
-      }
-      console.log(`Course ID: ${course.id}`);  // Log the ID for verification
-      return course.visibility === 'public' && course.status === 'approved';
-    }) as Course[];
-    setCourses(publicCourses);
-  }, []);
+    fetchCourses()
+  }, [])
 
-   
+  const fetchCourses = async () => {
+    try {
+      const response = await fetch('/api/courses')
+      const data = await response.json()
+      if (data.success) {
+        setCourses(data.data)
+      }
+    } catch (error) {
+      console.error('Error fetching courses:', error)
+    }
+  }
+
+  const handleAddToCourse = async (courseId: number) => {
+    if (!session) {
+      // Redirect to login with callback URL
+      const currentPath = window.location.pathname
+      router.push(`/auth/login?callbackUrl=${encodeURIComponent(currentPath)}`)
+      return
+    }
+
+    try {
+      const response = await fetch('/api/courses', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          // Include credentials to ensure session is passed
+          'Authorization': `Bearer ${session.accessToken}` // Ensure accessToken is available
+        },
+        body: JSON.stringify({ courseId }),
+        credentials: 'include', // Include credentials
+      })
+
+      const data = await response.json()
+      if (data.success) {
+        alert('Course added successfully!')
+      } else {
+        alert(data.message || 'Failed to add course')
+      }
+    } catch (error) {
+      console.error('Error adding course:', error)
+      alert('Failed to add course')
+    }
+  }
+
+  // Check for pending course after login
+  useEffect(() => {
+    if (session) {
+      const pendingCourseId = localStorage.getItem('pendingCourseId')
+      if (pendingCourseId) {
+        handleAddToCourse(parseInt(pendingCourseId))
+        localStorage.removeItem('pendingCourseId')
+      }
+    }
+  }, [session])
 
   const filteredCourses = courses.filter(course => {
     const matchesSearch = course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -108,17 +154,19 @@ export default function CoursesPage() {
           {filteredCourses.length > 0 ? (
             filteredCourses.map((course, index) => (
               <CourseCard
-                key={course.id!}  // Use non-null assertion
+                key={course.id!}
                 course={{
                   id: course.id!,
                   title: course.title,
-                  author: course.author,  // Use author instead of instructor
+                  author: course.instructor || course.author,
                   platform: course.platform,
                   image: course.image,
                   description: course.description,
-                  price: course.price
+                  price: course.price,
+                  createdBy: course.createdBy
                 }}
                 index={index}
+                onAddToCourse={handleAddToCourse}
               />
             ))
           ) : (
@@ -138,6 +186,4 @@ export default function CoursesPage() {
       </div>
     </div>
   )
-
-  
 }

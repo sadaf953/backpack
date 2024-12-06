@@ -69,3 +69,138 @@ export async function POST(request: NextRequest) {
     }, { status: 500 })
   }
 }
+
+// Add a course to user's collection
+export async function PUT(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+    
+    console.log('Session in course addition:', session) // Debug logging
+    
+    if (!session) {
+      console.error('No session found during course addition') // Additional logging
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Unauthorized. Please log in.' 
+      }, { status: 401 })
+    }
+
+    const body = await request.json()
+    const { courseId } = body
+    
+    console.log('Received course ID:', courseId) // Debug logging
+    console.log('User ID from session:', session.user.id) // Debug logging
+    
+    if (!courseId) {
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Course ID is required' 
+      }, { status: 400 })
+    }
+
+    // Verify course exists
+    const courseExists = await prisma.course.findUnique({
+      where: { id: courseId }
+    })
+
+    if (!courseExists) {
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Course not found' 
+      }, { status: 404 })
+    }
+
+    // Check if course is already in user's collection
+    const existingUserCourse = await prisma.userCourse.findUnique({
+      where: {
+        userId_courseId: {
+          userId: session.user.id,
+          courseId: courseId
+        }
+      }
+    })
+
+    if (existingUserCourse) {
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Course already in your collection' 
+      }, { status: 400 })
+    }
+
+    // Add course to user's collection
+    const userCourse = await prisma.userCourse.create({
+      data: {
+        userId: session.user.id,
+        courseId: courseId,
+        status: 'active'
+      },
+      include: {
+        course: {
+          include: {
+            createdBy: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
+          }
+        }
+      }
+    })
+
+    console.log('Course added successfully:', userCourse) // Success logging
+
+    return NextResponse.json({ 
+      success: true, 
+      data: userCourse 
+    })
+
+  } catch (error) {
+    console.error('Error adding course to collection:', error)
+    return NextResponse.json({ 
+      success: false, 
+      message: 'Failed to add course',
+      error: String(error)
+    }, { status: 500 })
+  }
+}
+
+// Get courses by user
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const userId = searchParams.get('userId')
+    
+    const courses = await prisma.course.findMany({
+      where: {
+        OR: [
+          { visibility: 'public' },
+          userId ? { createdById: userId } : {}
+        ]
+      },
+      include: {
+        createdBy: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    })
+
+    return NextResponse.json({ 
+      success: true, 
+      data: courses 
+    })
+
+  } catch (error: any) {
+    console.error('Error fetching courses:', error)
+    return NextResponse.json({ 
+      success: false, 
+      message: error.message 
+    }, { status: 500 })
+  }
+}

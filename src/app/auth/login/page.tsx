@@ -1,17 +1,28 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { signIn } from "next-auth/react"
-import { useRouter } from "next/navigation"
+import { signIn, useSession } from "next-auth/react"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { loginSchema, type LoginSchema } from "@/lib/validations/auth"
 
 export default function LoginPage() {
   const router = useRouter()
+  const { data: session } = useSession()
+  const searchParams = useSearchParams()
   const [error, setError] = useState<string>("")
   const [loading, setLoading] = useState(false)
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (session) {
+      const callbackUrl = searchParams.get("callbackUrl")
+      router.push(callbackUrl || "/")
+      router.refresh()
+    }
+  }, [session, router, searchParams])
 
   const {
     register,
@@ -37,7 +48,10 @@ export default function LoginPage() {
         return
       }
 
-      router.push("/")
+      // Redirect to home or stored redirect path
+      const redirectPath = localStorage.getItem('loginRedirectPath') || '/'
+      localStorage.removeItem('loginRedirectPath')
+      router.push(redirectPath)
       router.refresh()
     } catch (error) {
       setError("Something went wrong. Please try again.")

@@ -5,35 +5,79 @@ import { notFound, useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { ExternalLink, Plus, CheckCircle } from 'lucide-react'
 import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
+import Image from 'next/image'
 
 export default function CoursePage({ params }: { params: { id: string } }) {
   const router = useRouter()
+  const { data: session, status } = useSession()
   const course = courses.find(c => c.id.toString() === params.id)
   const [isAdded, setIsAdded] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   
   useEffect(() => {
-    // Check if course is already in dashboard
-    const savedCourses = localStorage.getItem('savedCourses')
-    if (savedCourses) {
-      const courses = JSON.parse(savedCourses)
-      setIsAdded(courses.some((c: any) => c.id.toString() === params.id))
+    const checkDashboardStatus = async () => {
+      if (status !== 'authenticated' || !session?.user?.id) return
+      
+      try {
+        const response = await fetch('/api/courses', {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+        })
+        const data = await response.json()
+        
+        if (data.success && Array.isArray(data.courses)) {
+          setIsAdded(data.courses.some((c: any) => c.id.toString() === params.id))
+        } else {
+          console.error('Courses data is not an array or is undefined', data.courses)
+        }
+      } catch (error) {
+        console.error('Error checking dashboard status:', error)
+      }
     }
-  }, [params.id])
+    
+    checkDashboardStatus()
+  }, [params.id, session, status])
 
   if (!course) {
     notFound()
   }
 
-  const handleDashboardAction = () => {
+  const handleDashboardAction = async () => {
+    if (status !== 'authenticated') {
+      router.push(`/auth/login?callbackUrl=${encodeURIComponent(window.location.pathname)}`)
+      return
+    }
+
     if (isAdded) {
       router.push('/dashboard')
-    } else {
-      // Add course to dashboard
-      const savedCourses = localStorage.getItem('savedCourses')
-      const courses = savedCourses ? JSON.parse(savedCourses) : []
-      courses.push(course)
-      localStorage.setItem('savedCourses', JSON.stringify(courses))
-      setIsAdded(true)
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      const response = await fetch('/api/courses', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ courseId: parseInt(params.id) }),
+        credentials: 'include',
+      })
+
+      const data = await response.json()
+      if (data.success) {
+        setIsAdded(true)
+      } else {
+        alert(data.message || 'Failed to add course to dashboard')
+      }
+    } catch (error) {
+      console.error('Error adding course to dashboard:', error)
+      alert('Failed to add course to dashboard')
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -50,10 +94,13 @@ export default function CoursePage({ params }: { params: { id: string } }) {
             {/* Left Column - Course Image */}
             <div className="p-4 lg:p-6">
               <div className="sticky top-8">
-                <img
+                <Image
                   src={course.image}
                   alt={course.title}
+                  width={800}
+                  height={450}
                   className="w-full h-auto rounded-xl"
+                  priority
                 />
               </div>
             </div>

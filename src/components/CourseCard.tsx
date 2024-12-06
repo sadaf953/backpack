@@ -3,6 +3,8 @@
 import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
+import { useSession } from 'next-auth/react'
+import { Plus } from 'lucide-react'
 
 interface CourseCardProps {
   course: {
@@ -15,26 +17,38 @@ interface CourseCardProps {
     price?: number
     createdBy?: {
       name: string
+      id: string
     }
   }
   index: number
-
+  onAddToCourse?: (courseId: number) => void
 }
 
-
-export function CourseCard({ course, index }: CourseCardProps) {
+export function CourseCard({ course, index, onAddToCourse }: CourseCardProps) {
   const router = useRouter()
+  const { data: session } = useSession()
 
   useEffect(() => {
     console.log('Rendering CourseCard:', { course, index })
   }, [course, index])
+
+  const handleAddToCourse = async (e: React.MouseEvent) => {
+    e.stopPropagation() // Prevent card click event
+    if (!session) {
+      router.push('/auth/login')
+      return
+    }
+    if (onAddToCourse) {
+      onAddToCourse(course.id)
+    }
+  }
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.1, duration: 0.5 }}
-      className="group cursor-pointer"
+      className="group cursor-pointer relative"
       onClick={() => router.push(`/courses/${course.id}`)}
     >
       <div className="relative overflow-hidden rounded-xl bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl transition-all duration-300 
@@ -68,13 +82,15 @@ export function CourseCard({ course, index }: CourseCardProps) {
                 </span>
               )}
             </div>
-            <p className="text-gray-600 dark:text-gray-300 text-sm mb-2">{course.author}</p>
-            <p className="text-gray-600 dark:text-gray-300 text-sm mb-2 line-clamp-3">{course.description}</p>
+            <p className="text-gray-600 dark:text-gray-300 text-sm mb-2">
+              by {course.createdBy?.name || course.author}
+            </p>
+            <p className="text-gray-600 dark:text-gray-300 text-sm mb-2 line-clamp-3">
+              {course.description}
+            </p>
             <p className="text-gray-600 dark:text-gray-300 text-sm mb-2">
               {course.price ? `$${course.price.toLocaleString()}` : 'Free'}
             </p>
-          </div>
-          <div className="flex items-center justify-between">
           </div>
         </div>
 
